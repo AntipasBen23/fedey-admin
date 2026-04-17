@@ -8,7 +8,6 @@ export default function LoginPage() {
   const router = useRouter();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
-  const [adminKey, setAdminKey] = useState("");
   const [showPw, setShowPw] = useState(false);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
@@ -21,7 +20,7 @@ export default function LoginPage() {
       const res = await fetch(`${API_URL}/v1/admin/login`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ email, password, adminKey }),
+        body: JSON.stringify({ email, password }),
       });
       const data = await res.json();
       if (!res.ok) throw new Error(data.error || "Login failed");
@@ -89,13 +88,6 @@ export default function LoginPage() {
                 {showPw ? "Hide" : "Show"}
               </button>
             </div>
-          </div>
-
-          <div>
-            <label style={{ display: "block", fontSize: "0.8rem", fontWeight: 600,
-              color: "var(--muted)", marginBottom: "0.4rem" }}>Admin Key</label>
-            <input type="password" value={adminKey} onChange={e => setAdminKey(e.target.value)}
-              placeholder="Secret admin key" required style={inp} />
           </div>
 
           <button type="submit" disabled={loading} style={{
