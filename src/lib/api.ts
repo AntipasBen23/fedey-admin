@@ -1,6 +1,6 @@
 export const API_URL =
   process.env.NEXT_PUBLIC_API_URL ||
-  "https://fedey-backend-production.up.railway.app";
+  "https://api.furciai.com";
 
 export function getToken(): string {
   if (typeof window === "undefined") return "";
