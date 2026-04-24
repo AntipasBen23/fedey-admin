@@ -4,6 +4,14 @@ import { useEffect, useState, useCallback } from "react";
 import AdminLayout from "@/components/AdminLayout";
 import { adminFetch } from "@/lib/api";
 
+type IncompleteUser = {
+  id: number;
+  name: string;
+  email: string;
+  stoppedAt: string;
+  createdAt: string;
+};
+
 type OutreachLog = {
   id: number;
   userId: number;
@@ -33,19 +41,25 @@ function fmt(iso: string) {
 }
 
 export default function OutreachPage() {
-  const [logs, setLogs]       = useState<OutreachLog[]>([]);
-  const [total, setTotal]     = useState(0);
-  const [loading, setLoading] = useState(true);
+  const [incomplete, setIncomplete] = useState<IncompleteUser[]>([]);
+  const [logs, setLogs]             = useState<OutreachLog[]>([]);
+  const [logTotal, setLogTotal]     = useState(0);
+  const [loading, setLoading]       = useState(true);
   const [triggering, setTriggering] = useState(false);
   const [triggered, setTriggered]   = useState(false);
 
   const load = useCallback(async () => {
     setLoading(true);
     try {
-      const r = await adminFetch("/v1/admin/outreach?limit=200");
-      const data = await r.json();
-      setLogs(data.logs || []);
-      setTotal(data.total || 0);
+      const [incRes, logRes] = await Promise.all([
+        adminFetch("/v1/admin/outreach/incomplete"),
+        adminFetch("/v1/admin/outreach?limit=200"),
+      ]);
+      const incData = await incRes.json();
+      const logData = await logRes.json();
+      setIncomplete(incData.users || []);
+      setLogs(logData.logs || []);
+      setLogTotal(logData.total || 0);
     } catch {} finally { setLoading(false); }
   }, []);
 
@@ -56,108 +70,154 @@ export default function OutreachPage() {
     try {
       await adminFetch("/v1/admin/outreach/trigger", { method: "POST" });
       setTriggered(true);
-      setTimeout(() => { setTriggered(false); load(); }, 3000);
+      setTimeout(() => { setTriggered(false); load(); }, 4000);
     } catch {} finally { setTriggering(false); }
   };
 
+  const cell: React.CSSProperties = { padding: "0.75rem 1rem" };
+  const th: React.CSSProperties   = { ...cell, textAlign: "left", fontWeight: 600, color: "var(--muted)", fontSize: "0.8rem" };
+
   return (
     <AdminLayout>
-      <div style={{ maxWidth: 1000 }}>
+      <div style={{ maxWidth: 1020 }}>
 
-        {/* Header */}
-        <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: "1.75rem" }}>
+        {/* ── Header ── */}
+        <div style={{ display: "flex", alignItems: "flex-start", justifyContent: "space-between", marginBottom: "2rem" }}>
           <div>
             <h1 style={{ margin: 0, fontSize: "1.4rem", fontWeight: 700, color: "var(--text)" }}>
               Onboarding Outreach
             </h1>
-            <p style={{ margin: "0.25rem 0 0", fontSize: "0.85rem", color: "var(--muted)" }}>
-              Users who started onboarding but did not finish — and were sent a follow-up email.
+            <p style={{ margin: "0.3rem 0 0", fontSize: "0.85rem", color: "var(--muted)" }}>
+              Users who started but did not finish onboarding. Send them a follow-up email.
             </p>
           </div>
           <button
             onClick={triggerScan}
             disabled={triggering || triggered}
             style={{
-              padding: "0.55rem 1.25rem", borderRadius: "8px", fontWeight: 600,
-              fontSize: "0.85rem", cursor: triggering ? "not-allowed" : "pointer",
-              background: triggered ? "rgba(34,197,94,0.15)" : "rgba(36,152,255,0.15)",
-              border: `1px solid ${triggered ? "rgba(34,197,94,0.3)" : "rgba(36,152,255,0.3)"}`,
-              color: triggered ? "#22c55e" : "var(--primary)",
-              transition: "all 0.2s",
+              padding: "0.6rem 1.4rem", borderRadius: "8px", fontWeight: 700,
+              fontSize: "0.875rem", cursor: triggering ? "not-allowed" : "pointer",
+              background: triggered ? "rgba(34,197,94,0.15)" : "rgba(36,152,255,0.2)",
+              border: `1px solid ${triggered ? "rgba(34,197,94,0.4)" : "rgba(36,152,255,0.4)"}`,
+              color: triggered ? "#22c55e" : "var(--primary)", transition: "all 0.2s",
             }}
           >
-            {triggered ? "Scan triggered" : triggering ? "Triggering..." : "Run scan now"}
+            {triggered ? "Emails are being sent..." : triggering ? "Triggering..." : "Send emails to all below"}
           </button>
         </div>
 
-        {/* Summary tile */}
-        <div style={{
-          background: "var(--surface)", border: "1px solid var(--border)",
-          borderRadius: "10px", padding: "1rem 1.5rem", marginBottom: "1.5rem",
-          display: "inline-flex", alignItems: "center", gap: "0.5rem",
-        }}>
-          <span style={{ fontSize: "1.5rem", fontWeight: 800, color: "var(--primary)" }}>{total}</span>
-          <span style={{ fontSize: "0.875rem", color: "var(--muted)" }}>total outreach emails sent</span>
-        </div>
+        {/* ── Section 1: Incomplete users ── */}
+        <h2 style={{ fontSize: "1rem", fontWeight: 600, color: "var(--text)", marginBottom: "0.75rem" }}>
+          Users who stopped halfway
+          {!loading && (
+            <span style={{ marginLeft: "0.6rem", fontSize: "0.8rem", fontWeight: 500, color: "var(--muted)" }}>
+              ({incomplete.length})
+            </span>
+          )}
+        </h2>
 
-        {/* Table */}
         {loading ? (
-          <p style={{ color: "var(--muted)", fontSize: "0.9rem" }}>Loading...</p>
-        ) : logs.length === 0 ? (
+          <p style={{ color: "var(--muted)", fontSize: "0.9rem", marginBottom: "2rem" }}>Loading...</p>
+        ) : incomplete.length === 0 ? (
           <div style={{
-            background: "var(--surface)", border: "1px solid var(--border)",
-            borderRadius: "10px", padding: "3rem", textAlign: "center",
-            color: "var(--muted)", fontSize: "0.9rem",
+            background: "var(--surface)", border: "1px solid var(--border)", borderRadius: "10px",
+            padding: "2.5rem", textAlign: "center", color: "var(--muted)", fontSize: "0.9rem", marginBottom: "2rem",
           }}>
-            No outreach emails sent yet. Run a scan or wait for the daily check.
+            No incomplete users found. Everyone has either finished onboarding or not started yet.
           </div>
         ) : (
-          <div style={{ background: "var(--surface)", border: "1px solid var(--border)", borderRadius: "10px", overflow: "hidden" }}>
+          <div style={{ background: "var(--surface)", border: "1px solid var(--border)", borderRadius: "10px", overflow: "hidden", marginBottom: "2.5rem" }}>
             <table style={{ width: "100%", borderCollapse: "collapse", fontSize: "0.875rem" }}>
               <thead>
                 <tr style={{ borderBottom: "1px solid var(--border)", background: "rgba(255,255,255,0.02)" }}>
-                  {["User", "Email", "Stopped at", "Sent"].map(h => (
-                    <th key={h} style={{
-                      padding: "0.75rem 1rem", textAlign: "left",
-                      fontWeight: 600, color: "var(--muted)", fontSize: "0.8rem",
-                    }}>{h}</th>
-                  ))}
+                  <th style={th}>Name</th>
+                  <th style={th}>Email</th>
+                  <th style={th}>Stopped at</th>
+                  <th style={th}>Signed up</th>
                 </tr>
               </thead>
               <tbody>
-                {logs.map((log, i) => (
-                  <tr key={log.id} style={{
-                    borderBottom: i < logs.length - 1 ? "1px solid var(--border)" : "none",
-                    transition: "background 0.15s",
-                  }}
+                {incomplete.map((u, i) => (
+                  <tr
+                    key={u.id}
+                    style={{ borderBottom: i < incomplete.length - 1 ? "1px solid var(--border)" : "none" }}
                     onMouseEnter={e => (e.currentTarget.style.background = "rgba(255,255,255,0.02)")}
                     onMouseLeave={e => (e.currentTarget.style.background = "transparent")}
                   >
-                    <td style={{ padding: "0.75rem 1rem", color: "var(--text)", fontWeight: 500 }}>
-                      {log.userName || "Unknown"}
-                    </td>
-                    <td style={{ padding: "0.75rem 1rem", color: "var(--muted)" }}>
-                      {log.userEmail}
-                    </td>
-                    <td style={{ padding: "0.75rem 1rem" }}>
+                    <td style={{ ...cell, color: "var(--text)", fontWeight: 500 }}>{u.name || "Unknown"}</td>
+                    <td style={{ ...cell, color: "var(--muted)" }}>{u.email}</td>
+                    <td style={cell}>
                       <span style={{
                         background: "rgba(251,191,36,0.1)", color: "#fbbf24",
-                        border: "1px solid rgba(251,191,36,0.2)",
-                        borderRadius: "5px", padding: "0.2rem 0.6rem",
-                        fontSize: "0.78rem", fontWeight: 600,
+                        border: "1px solid rgba(251,191,36,0.2)", borderRadius: "5px",
+                        padding: "0.2rem 0.6rem", fontSize: "0.78rem", fontWeight: 600,
                       }}>
-                        {stepLabel(log.stoppedAt)}
+                        {stepLabel(u.stoppedAt)}
                       </span>
                     </td>
-                    <td style={{ padding: "0.75rem 1rem", color: "var(--muted)", fontSize: "0.82rem" }}>
-                      {fmt(log.sentAt)}
-                    </td>
+                    <td style={{ ...cell, color: "var(--muted)", fontSize: "0.82rem" }}>{u.createdAt}</td>
                   </tr>
                 ))}
               </tbody>
             </table>
           </div>
         )}
+
+        {/* ── Section 2: Sent emails log ── */}
+        <h2 style={{ fontSize: "1rem", fontWeight: 600, color: "var(--text)", marginBottom: "0.75rem" }}>
+          Emails sent
+          {!loading && (
+            <span style={{ marginLeft: "0.6rem", fontSize: "0.8rem", fontWeight: 500, color: "var(--muted)" }}>
+              ({logTotal} total)
+            </span>
+          )}
+        </h2>
+
+        {!loading && logs.length === 0 ? (
+          <div style={{
+            background: "var(--surface)", border: "1px solid var(--border)", borderRadius: "10px",
+            padding: "2.5rem", textAlign: "center", color: "var(--muted)", fontSize: "0.9rem",
+          }}>
+            No emails sent yet. Hit the button above to send now.
+          </div>
+        ) : (
+          <div style={{ background: "var(--surface)", border: "1px solid var(--border)", borderRadius: "10px", overflow: "hidden" }}>
+            <table style={{ width: "100%", borderCollapse: "collapse", fontSize: "0.875rem" }}>
+              <thead>
+                <tr style={{ borderBottom: "1px solid var(--border)", background: "rgba(255,255,255,0.02)" }}>
+                  <th style={th}>Name</th>
+                  <th style={th}>Email</th>
+                  <th style={th}>Stopped at</th>
+                  <th style={th}>Sent</th>
+                </tr>
+              </thead>
+              <tbody>
+                {logs.map((log, i) => (
+                  <tr
+                    key={log.id}
+                    style={{ borderBottom: i < logs.length - 1 ? "1px solid var(--border)" : "none" }}
+                    onMouseEnter={e => (e.currentTarget.style.background = "rgba(255,255,255,0.02)")}
+                    onMouseLeave={e => (e.currentTarget.style.background = "transparent")}
+                  >
+                    <td style={{ ...cell, color: "var(--text)", fontWeight: 500 }}>{log.userName || "Unknown"}</td>
+                    <td style={{ ...cell, color: "var(--muted)" }}>{log.userEmail}</td>
+                    <td style={cell}>
+                      <span style={{
+                        background: "rgba(99,102,241,0.1)", color: "#818cf8",
+                        border: "1px solid rgba(99,102,241,0.2)", borderRadius: "5px",
+                        padding: "0.2rem 0.6rem", fontSize: "0.78rem", fontWeight: 600,
+                      }}>
+                        {stepLabel(log.stoppedAt)}
+                      </span>
+                    </td>
+                    <td style={{ ...cell, color: "var(--muted)", fontSize: "0.82rem" }}>{fmt(log.sentAt)}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        )}
+
       </div>
     </AdminLayout>
   );
