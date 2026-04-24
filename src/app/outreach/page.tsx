@@ -63,6 +63,7 @@ export default function OutreachPage() {
   const [loading, setLoading]         = useState(true);
   const [triggering, setTriggering]   = useState(false);
   const [triggered, setTriggered]     = useState(false);
+  const [rowState, setRowState]       = useState<Record<number, "sending" | "sent" | "error">>({});
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -81,6 +82,19 @@ export default function OutreachPage() {
   }, []);
 
   useEffect(() => { load(); }, [load]);
+
+  const sendToUser = async (userId: number) => {
+    setRowState(prev => ({ ...prev, [userId]: "sending" }));
+    try {
+      const res = await adminFetch(`/v1/admin/outreach/trigger/${userId}`, { method: "POST" });
+      if (!res.ok) throw new Error();
+      setRowState(prev => ({ ...prev, [userId]: "sent" }));
+      setTimeout(() => load(), 2000);
+    } catch {
+      setRowState(prev => ({ ...prev, [userId]: "error" }));
+      setTimeout(() => setRowState(prev => { const n = { ...prev }; delete n[userId]; return n; }), 3000);
+    }
+  };
 
   const triggerScan = async () => {
     setTriggering(true);
@@ -130,7 +144,7 @@ export default function OutreachPage() {
             <table style={{ width: "100%", borderCollapse: "collapse", fontSize: "0.875rem" }}>
               <thead>
                 <tr style={{ borderBottom: "1px solid var(--border)", background: "rgba(255,255,255,0.02)" }}>
-                  <th style={th}>Name</th><th style={th}>Email</th><th style={th}>Stopped at</th><th style={th}>Signed up</th>
+                  <th style={th}>Name</th><th style={th}>Email</th><th style={th}>Stopped at</th><th style={th}>Signed up</th><th style={th}></th>
                 </tr>
               </thead>
               <tbody>
@@ -148,6 +162,27 @@ export default function OutreachPage() {
                       </span>
                     </td>
                     <td style={{ ...cell, color: "var(--muted)", fontSize: "0.82rem" }}>{u.createdAt}</td>
+                    <td style={{ ...cell, textAlign: "right" }}>
+                      {(() => {
+                        const state = rowState[u.id];
+                        if (state === "sent") return <span style={{ fontSize: "0.78rem", color: "#22c55e", fontWeight: 600 }}>Sent</span>;
+                        if (state === "error") return <span style={{ fontSize: "0.78rem", color: "#ef4444", fontWeight: 600 }}>Failed</span>;
+                        return (
+                          <button
+                            disabled={state === "sending"}
+                            onClick={() => sendToUser(u.id)}
+                            style={{
+                              padding: "0.25rem 0.75rem", borderRadius: "6px", fontSize: "0.78rem",
+                              fontWeight: 600, cursor: state === "sending" ? "not-allowed" : "pointer",
+                              background: "rgba(36,152,255,0.12)", border: "1px solid rgba(36,152,255,0.3)",
+                              color: "var(--primary)", transition: "all 0.2s",
+                            }}
+                          >
+                            {state === "sending" ? "Sending..." : "Send email"}
+                          </button>
+                        );
+                      })()}
+                    </td>
                   </tr>
                 ))}
               </tbody>
