@@ -119,19 +119,33 @@ export default function OutreachPage() {
               Track users who stopped halfway, who completed, and who was emailed.
             </p>
           </div>
-          <button
-            onClick={triggerScan}
-            disabled={triggering || triggered}
-            style={{
-              padding: "0.6rem 1.4rem", borderRadius: "8px", fontWeight: 700,
-              fontSize: "0.875rem", cursor: triggering ? "not-allowed" : "pointer",
-              background: triggered ? "rgba(34,197,94,0.15)" : "rgba(36,152,255,0.2)",
-              border: `1px solid ${triggered ? "rgba(34,197,94,0.4)" : "rgba(36,152,255,0.4)"}`,
-              color: triggered ? "#22c55e" : "var(--primary)", transition: "all 0.2s",
-            }}
-          >
-            {triggered ? "Emails are being sent..." : triggering ? "Triggering..." : "Send emails to all below"}
-          </button>
+          <div style={{ display: "flex", gap: "0.75rem", alignItems: "center" }}>
+            <button
+              onClick={() => load()}
+              disabled={loading}
+              style={{
+                padding: "0.6rem 1rem", borderRadius: "8px", fontWeight: 600,
+                fontSize: "0.875rem", cursor: loading ? "not-allowed" : "pointer",
+                background: "rgba(255,255,255,0.05)", border: "1px solid var(--border)",
+                color: "var(--muted)", transition: "all 0.2s",
+              }}
+            >
+              {loading ? "Refreshing..." : "↻ Refresh"}
+            </button>
+            <button
+              onClick={triggerScan}
+              disabled={triggering || triggered}
+              style={{
+                padding: "0.6rem 1.4rem", borderRadius: "8px", fontWeight: 700,
+                fontSize: "0.875rem", cursor: triggering ? "not-allowed" : "pointer",
+                background: triggered ? "rgba(34,197,94,0.15)" : "rgba(36,152,255,0.2)",
+                border: `1px solid ${triggered ? "rgba(34,197,94,0.4)" : "rgba(36,152,255,0.4)"}`,
+                color: triggered ? "#22c55e" : "var(--primary)", transition: "all 0.2s",
+              }}
+            >
+              {triggered ? "Emails are being sent..." : triggering ? "Triggering..." : "Send emails to all below"}
+            </button>
+          </div>
         </div>
 
         {/* ── Section 1: Stopped halfway ── */}
