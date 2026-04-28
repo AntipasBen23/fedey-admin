@@ -6,6 +6,7 @@ import { adminFetch } from "@/lib/api";
 
 type ActivityItem = {
   type: string; detail: string; platform: string; status: string; createdAt: string;
+  userEmail: string; userName: string;
 };
 
 const STATUS_COLORS: Record<string, string> = {
@@ -60,11 +61,11 @@ export default function ActivityPage() {
       <div style={{ background: "var(--surface)", border: "1px solid var(--border)",
         borderRadius: "12px", overflow: "hidden" }}>
         {/* Header */}
-        <div style={{ display: "grid", gridTemplateColumns: "3fr 1fr 1fr 1.2fr",
+        <div style={{ display: "grid", gridTemplateColumns: "2.5fr 1.6fr 1fr 1fr 1.2fr",
           padding: "0.75rem 1rem", borderBottom: "1px solid var(--border)",
           fontSize: "0.72rem", fontWeight: 700, color: "var(--muted)",
           textTransform: "uppercase", letterSpacing: "0.06em" }}>
-          <span>Content</span><span>Platform</span><span>Status</span><span>Created</span>
+          <span>Content</span><span>User</span><span>Platform</span><span>Status</span><span>Created</span>
         </div>
 
         {loading ? (
@@ -75,7 +76,7 @@ export default function ActivityPage() {
           </div>
         ) : filtered.map((item, i) => (
           <div key={i} style={{
-            display: "grid", gridTemplateColumns: "3fr 1fr 1fr 1.2fr",
+            display: "grid", gridTemplateColumns: "2.5fr 1.6fr 1fr 1fr 1.2fr",
             padding: "0.85rem 1rem", alignItems: "center",
             borderBottom: i < filtered.length - 1 ? "1px solid var(--border)" : "none",
             fontSize: "0.85rem",
@@ -84,6 +85,16 @@ export default function ActivityPage() {
               paddingRight: "1rem", color: "var(--text)" }}>
               {item.detail || "—"}
             </span>
+            <div style={{ paddingRight: "0.5rem", overflow: "hidden" }}>
+              <div style={{ fontWeight: 600, color: "var(--text)", fontSize: "0.82rem",
+                overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+                {item.userName || "—"}
+              </div>
+              <div style={{ fontSize: "0.72rem", color: "var(--muted)",
+                overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+                {item.userEmail || ""}
+              </div>
+            </div>
             <span style={{ color: "var(--muted)", fontWeight: 600 }}>
               {PLATFORM_ICONS[item.platform?.toLowerCase()] || item.platform || "—"}
             </span>
